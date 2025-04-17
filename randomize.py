@@ -22,5 +22,6 @@ def randomize(signups, n):
     # Save updated rand_df
     dataloader.save_rand(rand_df=rand_df)
 
-    # Return selected hashes as list
-    return selected_df['hash'].tolist()
+    selected_df = selected_df.merge(base_df[['email', 'hash']], on='hash', how='left')
+
+    return selected_df[['email', 'hash']]
