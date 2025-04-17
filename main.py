@@ -1,117 +1,137 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog
 import pandas as pd
-import randomize
-import tempfile
 import os
+import tempfile
+import randomize
+import dataloader
+
+DOWNLOAD_PASSWORD = "azinspire2024"  # Change to your desired password
 
 
-class ParrandGUI:
-    def __init__(self, master):
-        self.master = master
-        master.title("🎉 Parrand Draw")
-        master.geometry("650x700")
+class EmailDrawApp:
+    def __init__(self, root):
+        self.root = root
+        root.title("Parrand Draw")
+        root.geometry("600x600")
 
-        self.frame = ttk.Frame(master, padding=20)
-        self.frame.pack(expand=True, fill=tk.BOTH)
+        self.label = tk.Label(root, text="Upload an Excel/CSV file with emails or paste emails below:")
+        self.label.pack(pady=10)
 
-        # --- Upload/Input ---
-        ttk.Label(self.frame, text="Choose one of the methods to provide signups:").pack(pady=(0, 10))
+        self.upload_button = tk.Button(root, text="Upload File", command=self.upload_file)
+        self.upload_button.pack()
 
-        self.upload_button = ttk.Button(self.frame, text="📁 Upload Excel or CSV File", command=self.upload_file)
-        self.upload_button.pack(pady=5)
+        self.or_label = tk.Label(root, text="OR")
+        self.or_label.pack()
 
-        ttk.Label(self.frame, text="OR").pack(pady=5)
-
-        self.textbox = tk.Text(self.frame, height=10, width=70, font=("Courier", 10))
-        self.textbox.insert(tk.END, "Paste emails here, one per line...")
+        self.textbox = tk.Text(root, height=10, width=70)
         self.textbox.pack(pady=10)
 
-        ttk.Label(self.frame, text="🔢 Number of participants to draw:").pack(pady=(10, 5))
-        self.num_entry = ttk.Entry(self.frame, width=10)
-        self.num_entry.pack()
+        self.draw_label = tk.Label(root, text="Number of people to draw:")
+        self.draw_label.pack()
 
-        self.proceed_button = ttk.Button(self.frame, text="✅ Proceed to Randomize", command=self.proceed)
-        self.proceed_button.pack(pady=20)
+        self.n_entry = tk.Entry(root)
+        self.n_entry.pack()
 
-        # --- Output field (hidden at first) ---
-        self.output_label = ttk.Label(self.frame, text="🎯 Selected Participants (hashes):")
-        self.output_text = tk.Text(self.frame, height=10, width=70, font=("Courier", 10), wrap="none")
-        self.finish_button = ttk.Button(self.frame, text="🏁 Finish", command=self.master.quit)
+        self.proceed_button = tk.Button(root, text="Proceed", command=self.proceed)
+        self.proceed_button.pack(pady=10)
 
-        self.signups_file = None
+        self.output_label = tk.Label(root, text="Selected Emails:")
+        self.output_label.pack()
+
+        self.output_text = tk.Text(root, height=10, width=70)
+        self.output_text.pack(pady=10)
+
+        self.download_button = tk.Button(root, text="Download Data Files", command=self.prompt_password)
+        self.download_button.pack(pady=5)
+
+        self.finish_button = tk.Button(root, text="Finish", command=root.quit)
+        self.finish_button.pack(pady=10)
+
+        self.selected_file = None
 
     def upload_file(self):
-        file_path = filedialog.askopenfilename(
-            title="Select Signup File",
-            filetypes=[("Excel files", "*.xlsx *.xls"), ("CSV files", "*.csv")]
+        self.selected_file = filedialog.askopenfilename(
+            title="Select Signups File",
+            filetypes=[("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
         )
-        if file_path:
-            self.signups_file = file_path
-            messagebox.showinfo("File Selected", f"Selected file:\n{file_path}")
+        if self.selected_file:
+            messagebox.showinfo("File Selected", f"Selected file:\n{self.selected_file}")
 
     def proceed(self):
-        # Validate number
+        # Get number of people to draw
         try:
-            n = int(self.num_entry.get().strip())
-            if n < 1:
+            n = int(self.n_entry.get())
+            if n <= 0:
                 raise ValueError
         except ValueError:
-            messagebox.showerror("Invalid Number", "Please enter a valid number of participants to draw.")
+            messagebox.showerror("Invalid Input", "Please enter a valid positive integer for the number to draw.")
             return
 
-        # Get signups source
-        if self.signups_file:
-            input_file = self.signups_file
-        else:
-            pasted_text = self.textbox.get("1.0", tk.END).strip()
-            emails = [line.strip().lower() for line in pasted_text.splitlines() if "@" in line]
-            if not emails:
-                messagebox.showerror("Invalid Input", "No valid emails found in pasted content.")
+        # Handle pasted emails
+        if not self.selected_file:
+            pasted_emails = self.textbox.get("1.0", tk.END).strip().splitlines()
+            pasted_emails = [e.strip() for e in pasted_emails if e.strip()]
+            if not pasted_emails:
+                messagebox.showerror("No Emails", "Please paste some emails or upload a file.")
                 return
-            temp_df = pd.DataFrame({'email': emails})
-            tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode='w', newline='', encoding='utf-8')
-            temp_df.to_csv(tmpfile.name, index=False)
-            input_file = tmpfile.name
 
-        # Preview and confirm
-        try:
-            preview_df = pd.read_excel(input_file) if input_file.endswith('.xlsx') else pd.read_csv(input_file)
-            if 'email' not in preview_df.columns:
-                raise ValueError("Input must contain an 'email' column.")
-            email_preview = "\n".join(preview_df['email'].astype(str).head(5).tolist())
-            confirm = messagebox.askyesno("Confirm", f"{len(preview_df)} signups detected.\n\nPreview:\n{email_preview}\n\nContinue?")
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not load input file:\n{e}")
-            return
+            # Save to temp file
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline="")
+            df = pd.DataFrame({"email": pasted_emails})
+            df.to_csv(temp_file.name, index=False)
+            input_file = temp_file.name
+        else:
+            input_file = self.selected_file
 
-        if not confirm:
-            return
-
-        # Run draw
         try:
             selected_df = randomize.randomize(signups=input_file, n=n)
             emails = selected_df['email'].dropna().astype(str).tolist()
 
-            # Show in GUI text output
-            self.output_label.pack(pady=(10, 5))
             self.output_text.delete("1.0", tk.END)
             self.output_text.insert(tk.END, "\n".join(emails))
-            self.output_text.pack(pady=(0, 20))
-            self.finish_button.pack()
-
         except Exception as e:
-            messagebox.showerror("Error", f"Randomization failed:\n{e}")
-        finally:
-            if not self.signups_file and os.path.exists(input_file):
-                os.remove(input_file)
+            messagebox.showerror("Randomization failed", str(e))
 
+    def prompt_password(self):
+        password = simpledialog.askstring("Password Required", "Enter password to download files:", show='*')
+        if password == DOWNLOAD_PASSWORD:
+            self.download_files()
+        else:
+            messagebox.showerror("Access Denied", "Incorrect password.")
 
-def run():
-    root = tk.Tk()
-    app = ParrandGUI(root)
-    root.mainloop()
+    def download_files(self):
+        rand_file = "data/rand.csv"
+        base_file = "data/base.csv"
+
+        if not os.path.exists(rand_file) or not os.path.exists(base_file):
+            messagebox.showerror("Error", "Required data files do not exist.")
+            return
+
+        save_rand_path = filedialog.asksaveasfilename(title="Save rand.csv", defaultextension=".csv",
+                                                      filetypes=[("CSV Files", "*.csv")])
+        if save_rand_path:
+            try:
+                with open(rand_file, 'r') as src, open(save_rand_path, 'w') as dst:
+                    dst.write(src.read())
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not save rand.csv: {e}")
+                return
+
+        save_base_path = filedialog.asksaveasfilename(title="Save base.csv", defaultextension=".csv",
+                                                      filetypes=[("CSV Files", "*.csv")])
+        if save_base_path:
+            try:
+                with open(base_file, 'r') as src, open(save_base_path, 'w') as dst:
+                    dst.write(src.read())
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not save base.csv: {e}")
+                return
+
+        messagebox.showinfo("Download Complete", "Files downloaded successfully.")
 
 
 if __name__ == "__main__":
-    run()
+    root = tk.Tk()
+    app = EmailDrawApp(root)
+    root.mainloop()
