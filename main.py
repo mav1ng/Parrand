@@ -1,53 +1,70 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
+from tkinter import filedialog, messagebox, simpledialog, ttk
 import pandas as pd
 import os
 import tempfile
 import randomize
 import dataloader
 
-DOWNLOAD_PASSWORD = "azinspire2024"  # Change to your desired password
+DOWNLOAD_PASSWORD = "azinspire2024"
 
 
-class EmailDrawApp:
+class Parrand:
     def __init__(self, root):
         self.root = root
         root.title("Parrand Draw")
-        root.geometry("600x600")
+        root.geometry("720x700")
+        root.configure(bg="#f7f9fc")
 
-        self.label = tk.Label(root, text="Upload an Excel/CSV file with emails or paste emails below:")
-        self.label.pack(pady=10)
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("TLabel", background="#f7f9fc", font=("Helvetica", 11))
+        style.configure("Header.TLabel", font=("Helvetica", 14, "bold"), background="#f7f9fc", foreground="#1a1a1a")
+        style.configure("TButton", font=("Helvetica", 10), padding=6)
 
-        self.upload_button = tk.Button(root, text="Upload File", command=self.upload_file)
+        self.build_ui()
+
+    def build_ui(self):
+        ttk.Label(self.root, text="Email Signups Random Draw", style="Header.TLabel").pack(pady=(20, 10))
+
+        # Upload section
+        self.upload_button = ttk.Button(self.root, text="Upload Signup File", command=self.upload_file)
         self.upload_button.pack()
 
-        self.or_label = tk.Label(root, text="OR")
-        self.or_label.pack()
+        ttk.Label(self.root, text="or paste emails below:").pack(pady=(10, 2))
 
-        self.textbox = tk.Text(root, height=10, width=70)
-        self.textbox.pack(pady=10)
+        self.textbox = tk.Text(self.root, height=7, width=75, font=("Courier", 10), bd=1, relief="solid")
+        self.textbox.pack(pady=(0, 10))
 
-        self.draw_label = tk.Label(root, text="Number of people to draw:")
-        self.draw_label.pack()
+        ttk.Separator(self.root).pack(fill='x', pady=15)
 
-        self.n_entry = tk.Entry(root)
-        self.n_entry.pack()
+        frame = ttk.Frame(self.root)
+        frame.pack(pady=5)
 
-        self.proceed_button = tk.Button(root, text="Proceed", command=self.proceed)
+        ttk.Label(frame, text="Number of people to draw:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.n_entry = ttk.Entry(frame, width=10)
+        self.n_entry.grid(row=0, column=1, padx=5)
+
+        self.proceed_button = ttk.Button(self.root, text="Run Random Draw", command=self.proceed)
         self.proceed_button.pack(pady=10)
 
-        self.output_label = tk.Label(root, text="Selected Emails:")
-        self.output_label.pack()
+        ttk.Label(self.root, text="Selected Emails", style="Header.TLabel").pack(pady=(25, 5))
 
-        self.output_text = tk.Text(root, height=10, width=70)
+        self.output_text = tk.Text(self.root, height=10, width=75, font=("Courier", 10), bd=1, relief="solid", bg="#ffffff")
         self.output_text.pack(pady=10)
 
-        self.download_button = tk.Button(root, text="Download Data Files", command=self.prompt_password)
-        self.download_button.pack(pady=5)
+        ttk.Separator(self.root).pack(fill='x', pady=10)
 
-        self.finish_button = tk.Button(root, text="Finish", command=root.quit)
-        self.finish_button.pack(pady=10)
+        button_frame = ttk.Frame(self.root)
+        button_frame.pack(pady=10)
 
+        self.download_button = ttk.Button(button_frame, text="Download Data Files", command=self.prompt_password)
+        self.download_button.grid(row=0, column=0, padx=10)
+
+        self.finish_button = ttk.Button(button_frame, text="Finish", command=self.root.quit)
+        self.finish_button.grid(row=0, column=1, padx=10)
+
+        # Variable to track whether the input file was set
         self.selected_file = None
 
     def upload_file(self):
@@ -59,8 +76,8 @@ class EmailDrawApp:
             messagebox.showinfo("File Selected", f"Selected file:\n{self.selected_file}")
 
     def proceed(self):
-        # Get number of people to draw
         try:
+            # Validate the number of people to draw
             n = int(self.n_entry.get())
             if n <= 0:
                 raise ValueError
@@ -68,37 +85,47 @@ class EmailDrawApp:
             messagebox.showerror("Invalid Input", "Please enter a valid positive integer for the number to draw.")
             return
 
-        # Handle pasted emails
-        if not self.selected_file:
+        # If no file is selected, use the pasted emails
+        if not hasattr(self, 'selected_file') or self.selected_file is None:
             pasted_emails = self.textbox.get("1.0", tk.END).strip().splitlines()
             pasted_emails = [e.strip() for e in pasted_emails if e.strip()]
             if not pasted_emails:
                 messagebox.showerror("No Emails", "Please paste some emails or upload a file.")
                 return
 
-            # Save to temp file
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline="")
-            df = pd.DataFrame({"email": pasted_emails})
-            df.to_csv(temp_file.name, index=False)
-            input_file = temp_file.name
+            # Create a DataFrame from pasted emails
+            input_df = pd.DataFrame({"email": pasted_emails})
         else:
-            input_file = self.selected_file
+            # If a file is selected, read the file into a DataFrame
+            if self.selected_file.endswith('.xlsx'):
+                input_df = pd.read_excel(self.selected_file)
+            else:
+                input_df = pd.read_csv(self.selected_file)
 
+        # Call the randomizer with the DataFrame of emails, and the number of people to select
         try:
-            selected_df = randomize.randomize(signups=input_file, n=n)
+            # Pass the DataFrame directly, not the file path
+            selected_df = randomize.randomize(signups=input_df, n=n)
+
+            # Get the selected emails and display them in the output text area
             emails = selected_df['email'].dropna().astype(str).tolist()
 
+            # Clear the previous output and insert the selected emails
             self.output_text.delete("1.0", tk.END)
             self.output_text.insert(tk.END, "\n".join(emails))
+
+            # After randomizing, clear the text box if you want to allow new data input
+            self.textbox.delete("1.0", tk.END)
+
         except Exception as e:
             messagebox.showerror("Randomization failed", str(e))
 
     def prompt_password(self):
         password = simpledialog.askstring("Password Required", "Enter password to download files:", show='*')
-        if password == DOWNLOAD_PASSWORD:
+        if password and password == DOWNLOAD_PASSWORD:
             self.download_files()
         else:
-            messagebox.showerror("Access Denied", "Incorrect password.")
+            messagebox.showerror("Access Denied", "Incorrect password. Cannot download files.")
 
     def download_files(self):
         rand_file = "data/rand.csv"
@@ -133,5 +160,5 @@ class EmailDrawApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = EmailDrawApp(root)
+    app = Parrand(root)
     root.mainloop()
