@@ -34,7 +34,7 @@ pip install pandas
 1. Run the app:
 
 ```bash
-python app.py
+python main.py
 ```
 
 2. Paste email addresses into the textbox _or_ upload a file.
