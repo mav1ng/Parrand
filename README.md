@@ -31,7 +31,7 @@ pip install pandas
 
 ## Usage
 
-1. Run the app:
+1. Run the app by typing into your terminal:
 
 ```bash
 python main.py
