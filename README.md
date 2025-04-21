@@ -1,90 +1,105 @@
-# Parrand
+# Parrand - Email Signups Random Draw Tool
 
-**Parrand** is a simple desktop app to randomly select participants from a list of email signups. It supports weighted draws based on past selections and ensures fairness across multiple rounds.
-
-Built with **Python** and **Tkinter**, it allows input via pasted emails or uploaded CSV/XLSX files, and stores history for reproducible and consistent results over time.
+Parrand is a Python application designed to facilitate the random selection of participants from email signups. This tool allows users to upload signup lists or paste emails, select the number of participants, and then perform a weighted random draw. It also provides an option to download the resulting data files for further use.
 
 ---
 
 ## Features
 
-- Paste emails directly or upload a signup file (CSV or Excel)
-- Weighted random selection using priority values
-- Download result files with password protection
-- Saves and updates data across sessions (`base.csv`, `rand.csv`)
-- Avoids reselecting winners too frequently by increasing weights
+- **Email Signup Upload or Paste**: Users can either upload a signup file in CSV or Excel format or paste emails directly into a text area.
+- **Random Draw**: After selecting the number of participants to draw, the application performs a weighted random draw based on pre-defined priorities.
+- **Event Logging**: Logs are created with a timestamp and details of the event, including the selected emails and their associated priorities.
+- **Downloadable Data Files**: Allows users to download the data files (`rand.csv` and `base.csv`), which contain the list of all participants and their assigned priorities.
+- **Password Protection**: A password is required before downloading the data files to ensure security.
 
 ---
 
-## Requirements
+## Installation
 
-- Python 3.8+
-- pandas
+To run the Parrand app, you need to have Python installed on your system along with the required dependencies. Below are the installation steps.
 
-Install dependencies:
+1. Clone or download the repository:
 
-```bash
-pip install pandas
-```
+    ```bash
+    git clone https://github.com/yourusername/parrand.git
+    ```
+
+2. Install the necessary Python libraries:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3. You may need to install `py2app` (for macOS users) or any other packaging tool if you want to convert this into a standalone application. 
 
 ---
 
 ## Usage
 
-1. Run the app by typing into your terminal:
+1. **Running the App:**
+    - To run the app, execute the following:
 
-```bash
-python main.py
-```
+    ```bash
+    python main.py
+    ```
 
-2. Paste email addresses into the textbox _or_ upload a file.
-3. Enter the number of people to draw.
-4. Click **Run Random Draw**.
-5. View the selected emails and optionally download updated data files (`rand.csv`, `base.csv`).
+    - The app will open a GUI where you can upload a CSV or Excel file containing email signups or paste emails directly.
+    - Once you input the number of participants to draw and provide an event title, the app will display the results in a formatted manner.
 
----
+2. **Password Protection for File Download:**
+    - After running the draw, you can download the resulting data files (`rand.csv` and `base.csv`). A password is required to ensure secure access to these files.
+    - The default password is: `azinspire2024`.
 
-## Download Protection
-
-To download internal tracking files (`rand.csv`, `base.csv`), enter the password that you have set:
-
-
----
-
-## Data Files
-
-- `base.csv` – All known signups with hashed emails.
-- `rand.csv` – Internal file tracking selection weights and history.
-
-These files update automatically after each draw.
+3. **Log Files:**
+    - The application logs each draw event, including the selected emails and their priorities, to a log file (`log.txt`). The log entries are timestamped and can be reviewed for reference.
 
 ---
 
-## Logic Overview
+## Code Overview
 
-- Emails are normalized (trimmed, lowercased) and hashed (SHA256).
-- New signups are added to `base.csv`, and given default weight.
-- Participants are randomly drawn with weights.
-  - Winners: weight reset to 1
-  - Non-winners: weight increases by 1 (increasing future chance)
-- Reproducible thanks to persistent CSV storage.
+### main.py
+The main GUI and event logic for the Parrand app. It uses the `tkinter` library to create the user interface. Key functions include:
+- **Upload Email File**: Allows users to upload an email signup file in `.csv` or `.xlsx` format.
+- **Random Draw**: Performs the random draw based on email data and user input.
+- **Logging**: Creates a log of the random draw event, capturing the selected emails and their priorities.
+- **Password Protection**: Asks for a password before downloading the data files.
+
+### randomize.py
+Contains the core logic for randomizing the email signups and selecting participants. The `randomize()` function takes the signups DataFrame and the number of participants to draw, returning a DataFrame with selected emails and their priorities.
+
+### dataloader.py
+Handles the loading, saving, and updating of the `rand.csv` and `base.csv` files. These files store the email hashes and their associated priorities.
+
+### setup.py
+A setup script for packaging the app into a standalone application using `py2app` (for macOS). It specifies the necessary dependencies and configuration for packaging.
+
+### run_parrand.py
+A simple script for running Parrand from the command line. This script allows users to input file paths and the number of participants to draw directly in the terminal.
 
 ---
 
-## Project Structure
+## Development
 
-```
-.
-├── app.py           # GUI application (Tkinter)
-├── randomize.py     # Core logic for random draw
-├── dataloader.py    # Handles loading/saving data files
-├── data/
-│   ├── base.csv     # Stores all known emails and hashes
-│   └── rand.csv     # Tracks priority values per email hash
-```
+### Dependencies
+
+- `tkinter`: For creating the GUI.
+- `pandas`: For handling the email signup data.
+- `openpyxl` (if working with `.xlsx` files): For reading and writing Excel files.
+- `py2app` (optional, for macOS packaging): For packaging the app into a standalone application.
+
+### How to Contribute
+
+1. Fork the repository.
+2. Clone your fork to your local machine.
+3. Create a new branch for your feature or bug fix.
+4. Write your code, tests, and documentation.
+5. Push your changes and create a pull request.
 
 ---
 
 ## License
 
-MIT License. Use it, modify it, share it – just give credit. 💙
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+

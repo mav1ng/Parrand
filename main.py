@@ -136,9 +136,17 @@ class Parrand:
             # Logging
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log_lines = [f"--- {event_title} | {timestamp} ---"]
+
+            # Calculate max lengths for alignment
+            max_email_len = selected_df['email'].apply(len).max()
+            max_priority_len = selected_df['priority'].apply(lambda x: len(str(x))).max()
+
             for _, row in selected_df.iterrows():
-                log_lines.append(f"{row['email']} | priority: {row.get('used_priority', 'N/A')}")
-            log_lines.append("")
+                # Use formatted strings to ensure alignment
+                log_lines.append(
+                    f"{row['email']: <{max_email_len}} | priority: {str(row['used_priority']): <{max_priority_len}}")
+
+            log_lines.append("\n")  # Add a line break after each event
 
             # Save log
             log_path = dataloader.get_data_path("log.txt")
