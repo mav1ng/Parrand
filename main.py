@@ -14,8 +14,9 @@ class Parrand:
         self.root = root
         root.title("Parrand Draw")
         root.geometry("720x700")
-        root.configure(bg="#f7f9fc")
+        root.configure(bg="#f7f9fc")  # Ensure the window background is light
 
+        # Ensure we use a fixed theme for colors, avoiding dark mode conflicts
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("TLabel", background="#f7f9fc", font=("Helvetica", 11))
@@ -33,7 +34,8 @@ class Parrand:
 
         ttk.Label(self.root, text="or paste emails below:").pack(pady=(10, 2))
 
-        self.textbox = tk.Text(self.root, height=7, width=75, font=("Courier", 10), bd=1, relief="solid")
+        self.textbox = tk.Text(self.root, height=7, width=75, font=("Courier", 10), bd=1, relief="solid",
+                               bg="#ffffff", fg="#000000")  # Set background to white and text color to black
         self.textbox.pack(pady=(0, 10))
 
         ttk.Separator(self.root).pack(fill='x', pady=15)
@@ -50,7 +52,8 @@ class Parrand:
 
         ttk.Label(self.root, text="Selected Emails", style="Header.TLabel").pack(pady=(25, 5))
 
-        self.output_text = tk.Text(self.root, height=10, width=75, font=("Courier", 10), bd=1, relief="solid", bg="#ffffff")
+        self.output_text = tk.Text(self.root, height=10, width=75, font=("Courier", 10), bd=1, relief="solid",
+                                   bg="#ffffff", fg="#000000")  # Set background to white and text color to black
         self.output_text.pack(pady=10)
 
         ttk.Separator(self.root).pack(fill='x', pady=10)
@@ -102,9 +105,8 @@ class Parrand:
             else:
                 input_df = pd.read_csv(self.selected_file)
 
-        # Call the randomizer with the DataFrame of emails, and the number of people to select
         try:
-            # Pass the DataFrame directly, not the file path
+            # Call the randomizer with the DataFrame of emails, and the number of people to select
             selected_df = randomize.randomize(signups=input_df, n=n)
 
             # Get the selected emails and display them in the output text area
@@ -113,6 +115,9 @@ class Parrand:
             # Clear the previous output and insert the selected emails
             self.output_text.delete("1.0", tk.END)
             self.output_text.insert(tk.END, "\n".join(emails))
+
+            # Force the GUI to update and refresh the widget after text insertion
+            self.output_text.update_idletasks()
 
             # After randomizing, clear the text box if you want to allow new data input
             self.textbox.delete("1.0", tk.END)

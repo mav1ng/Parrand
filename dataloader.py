@@ -1,68 +1,68 @@
 import pandas as pd
 import hashlib
 import os
+import sys
+from pathlib import Path
 
+# Get path to folder where the EXE or script is running
+def get_base_path():
+    if getattr(sys, 'frozen', False):  # Running as a bundled exe
+        return Path(sys.executable).parent
+    else:  # Running as a .py script
+        return Path(__file__).parent
 
-def load_rand(base_df, rand_file="data/rand.csv"):
+# Get a path to a file inside the "data" folder
+def get_data_path(filename):
+    base_path = get_base_path()
+    data_dir = base_path / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return str(data_dir / filename)
+
+def load_rand(rand_file=None, base_df=None):
+    if rand_file is None:
+        rand_file = get_data_path("rand.csv")
+
     try:
-        # Load existing rand file
         rand_df = pd.read_csv(rand_file)
-
-        # Find hashes in base_df not already in rand_df
         new_hashes_df = base_df[['hash']][~base_df['hash'].isin(rand_df['hash'])].copy()
         new_hashes_df['priority'] = 1
-
-        # Append new hashes to rand_df
         rand_df = pd.concat([rand_df, new_hashes_df], ignore_index=True)
-
     except FileNotFoundError:
-        # If the file doesn't exist, create it from base_df
         rand_df = base_df[['hash']].copy()
         rand_df['priority'] = 1
     return rand_df
 
-
-def save_rand(rand_df, rand_file="data/rand.csv"):
-    # Ensure the directory exists
-    os.makedirs(os.path.dirname(rand_file), exist_ok=True)
-    # Save to CSV
+def save_rand(rand_df, rand_file=None):
+    if rand_file is None:
+        rand_file = get_data_path("rand.csv")
     rand_df.to_csv(rand_file, index=False)
 
-# Function to hash the email
 def hash_email(email: str) -> str:
     normalized = email.strip().lower().encode('utf-8')
     return hashlib.sha256(normalized).hexdigest()
 
-# Load the base dataframe
-def load_base(base_file="data/base.csv", email_column="email"):
+def load_base(base_file=None, email_column="email"):
+    if base_file is None:
+        base_file = get_data_path("base.csv")
     try:
         base_df = pd.read_csv(base_file)
     except FileNotFoundError:
         base_df = pd.DataFrame(columns=[email_column, 'hash'])
     return base_df
 
-# Save the base dataframe
-def save_base(base_df, base_file="data/base.csv"):
-    os.makedirs(os.path.dirname(base_file), exist_ok=True)
+def save_base(base_df, base_file=None):
+    if base_file is None:
+        base_file = get_data_path("base.csv")
     base_df.to_csv(base_file, index=False)
 
-
-def update_base(input_df, output_base_file="data/base.csv", base_file="data/base.csv", email_column="email", return_signups_only=False):
+def update_base(input_df, output_base_file=None, base_file=None, email_column="email", return_signups_only=False):
     base_df = load_base(base_file=base_file, email_column=email_column)
 
-    # Normalize input emails
     input_df[email_column] = input_df[email_column].str.strip().str.lower()
-
-    # Find new emails not in base
     new_emails_df = input_df[~input_df[email_column].isin(base_df[email_column])].copy()
-
-    # Hash new emails
     new_emails_df['hash'] = new_emails_df[email_column].apply(hash_email)
 
-    # Combine and deduplicate
     combined_df = pd.concat([base_df, new_emails_df], ignore_index=True).drop_duplicates(subset=[email_column])
-
-    # Save updated base
     save_base(combined_df, base_file=output_base_file)
 
     base_df = load_base(base_file=base_file, email_column=email_column)
@@ -73,5 +73,3 @@ def update_base(input_df, output_base_file="data/base.csv", base_file="data/base
         return combined_df, input_df
     else:
         return combined_df
-
-
