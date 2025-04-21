@@ -5,6 +5,8 @@ import os
 import tempfile
 import randomize
 import dataloader
+from datetime import datetime
+
 
 DOWNLOAD_PASSWORD = "azinspire2024"
 
@@ -80,7 +82,6 @@ class Parrand:
 
     def proceed(self):
         try:
-            # Validate the number of people to draw
             n = int(self.n_entry.get())
             if n <= 0:
                 raise ValueError
@@ -88,39 +89,61 @@ class Parrand:
             messagebox.showerror("Invalid Input", "Please enter a valid positive integer for the number to draw.")
             return
 
-        # If no file is selected, use the pasted emails
+        # Determine input source
         if not hasattr(self, 'selected_file') or self.selected_file is None:
             pasted_emails = self.textbox.get("1.0", tk.END).strip().splitlines()
             pasted_emails = [e.strip() for e in pasted_emails if e.strip()]
             if not pasted_emails:
                 messagebox.showerror("No Emails", "Please paste some emails or upload a file.")
                 return
-
-            # Create a DataFrame from pasted emails
             input_df = pd.DataFrame({"email": pasted_emails})
         else:
-            # If a file is selected, read the file into a DataFrame
             if self.selected_file.endswith('.xlsx'):
                 input_df = pd.read_excel(self.selected_file)
             else:
                 input_df = pd.read_csv(self.selected_file)
 
+        # Ask for event title
+        event_title = simpledialog.askstring("Event Title", "Enter the event name for this draw:")
+        if not event_title:
+            messagebox.showerror("Missing Title", "Event title is required to proceed.")
+            return
+
         try:
-            # Call the randomizer with the DataFrame of emails, and the number of people to select
+            import dataloader
+            from datetime import datetime
+
+            # Normalize emails
+            input_df["email"] = input_df["email"].str.strip().str.lower()
+
+            # Run randomization
             selected_df = randomize.randomize(signups=input_df, n=n)
 
-            # Get the selected emails and display them in the output text area
-            emails = selected_df['email'].dropna().astype(str).tolist()
+            # Load rand_df to attach priorities
+            base_df = dataloader.load_base()
+            rand_df = dataloader.load_rand(base_df=base_df)
 
-            # Clear the previous output and insert the selected emails
+            # Attach priority using hash
+            selected_df = selected_df.merge(rand_df[['hash', 'priority']], on='hash', how='left')
+
+            # Display results
+            emails = selected_df['email'].dropna().astype(str).tolist()
             self.output_text.delete("1.0", tk.END)
             self.output_text.insert(tk.END, "\n".join(emails))
-
-            # Force the GUI to update and refresh the widget after text insertion
             self.output_text.update_idletasks()
-
-            # After randomizing, clear the text box if you want to allow new data input
             self.textbox.delete("1.0", tk.END)
+
+            # Logging
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_lines = [f"--- {event_title} | {timestamp} ---"]
+            for _, row in selected_df.iterrows():
+                log_lines.append(f"{row['email']} | priority: {row.get('used_priority', 'N/A')}")
+            log_lines.append("")
+
+            # Save log
+            log_path = dataloader.get_data_path("log.txt")
+            with open(log_path, "a") as log_file:
+                log_file.write("\n".join(log_lines))
 
         except Exception as e:
             messagebox.showerror("Randomization failed", str(e))
@@ -161,6 +184,22 @@ class Parrand:
                 return
 
         messagebox.showinfo("Download Complete", "Files downloaded successfully.")
+
+    def log_event(self, event_title, selected_df):
+        log_file = dataloader.get_data_path("log.txt")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        lines = [f"Event: {event_title}", f"Time: {timestamp}", "Selected:"]
+
+        for _, row in selected_df.iterrows():
+            email = row.get('email', '')
+            priority = row.get('priority', '')
+            lines.append(f"{email}, priority={priority}")
+
+        lines.append("-" * 40)
+
+        with open(log_file, "a") as f:
+            f.write("\n".join(lines) + "\n")
 
 
 if __name__ == "__main__":

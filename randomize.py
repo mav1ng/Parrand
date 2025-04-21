@@ -3,62 +3,57 @@ import pandas as pd
 import hashlib
 
 def randomize(signups, n):
-    # Check if 'signups' is a DataFrame or a string and handle accordingly
+    import dataloader
+
     if isinstance(signups, str):
-        signup_df = parse_signup_emails(signups)  # If it's a string, parse it as emails
+        signup_df = parse_signup_emails(signups)
     elif isinstance(signups, pd.DataFrame):
-        signup_df = signups  # If it's a DataFrame, use it directly
+        signup_df = signups
     else:
         raise ValueError("Invalid signups format. Expected string or DataFrame.")
 
     if signup_df.empty:
         raise ValueError("No valid signups provided.")
 
-    # Update base with signups and get both: updated base + new signups only
     base_df, signup_df = dataloader.update_base(input_df=signup_df, return_signups_only=True)
 
-    # Ensure base_df contains the required columns
     if 'email' not in base_df.columns or 'hash' not in base_df.columns:
         raise ValueError("Base DataFrame is missing required columns: 'email' or 'hash'.")
 
-    # Load or update rand_df based only on the new signups
     rand_df = dataloader.load_rand(base_df=signup_df)
 
-    # Ensure rand_df contains the required column for hashing
     if 'hash' not in rand_df.columns or 'priority' not in rand_df.columns:
         raise ValueError("Rand DataFrame is missing required columns: 'hash' or 'priority'.")
 
-    # Get only the hashes from the new signups
     signup_hashes = signup_df['hash'].tolist()
     signup_rand_df = rand_df[rand_df['hash'].isin(signup_hashes)].copy()
 
-    # Ensure priority values are valid (non-zero and numeric)
     signup_rand_df['priority'] = pd.to_numeric(signup_rand_df['priority'], errors='coerce').fillna(1).clip(lower=1)
 
-    # Check if there are valid entries to sample from
     if signup_rand_df.empty:
         raise ValueError("No valid signups found to randomize.")
 
-    # Ensure valid weights (sum should not be zero)
     if signup_rand_df['priority'].sum() == 0:
         raise ValueError("Invalid weights: weights sum to zero.")
 
-    # Sample n hashes weighted by priority (from signups only)
+    # Save the original priorities used for weighting before modifying
+    priority_map = signup_rand_df.set_index('hash')['priority'].to_dict()
+
     weights = signup_rand_df['priority'].astype(float)
     selected_df = signup_rand_df.sample(n=n, weights=weights, replace=False, random_state=None)
 
-    # Update priorities only for hashes involved in this round
     rand_df.loc[rand_df['hash'].isin(selected_df['hash']), 'priority'] = 1
     rand_df.loc[rand_df['hash'].isin(signup_hashes) & ~rand_df['hash'].isin(selected_df['hash']), 'priority'] += 1
 
-    # Save updated rand_df
     dataloader.save_rand(rand_df=rand_df)
 
-    # Merge selected hashes back to get emails
     selected_df = selected_df.merge(base_df[['email', 'hash']], on='hash', how='left')
 
-    # Return selected emails and hashes
-    return selected_df[['email', 'hash']]
+    # Add the original priority values before updating
+    selected_df['used_priority'] = selected_df['hash'].map(priority_map)
+
+    return selected_df[['email', 'hash', 'used_priority']]
+
 
 
 def parse_signup_emails(email_text):
