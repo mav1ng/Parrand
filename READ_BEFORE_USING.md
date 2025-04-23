@@ -54,7 +54,3 @@ In case of participant cancellations:
 ## Accessing Draw Results
 
 You can review all randomized draws in the `log.txt` file located in the application folder.
-
-## Support
-
-If you encounter any issues or have questions about using the Participant Randomizer, please contact the AZInspire IT support team.
