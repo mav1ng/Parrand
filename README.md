@@ -6,7 +6,7 @@ Parrand is a Python application designed to facilitate the random selection of p
 
 ## Features
 
-- **Email Signup Upload or Paste**: Users can either upload a signup file in CSV or Excel format or paste emails directly into a text area.
+- **Email Paste**: Users can paste emails directly into a text area.
 - **Random Draw**: After selecting the number of participants to draw, the application performs a weighted random draw based on pre-defined priorities.
 - **Event Logging**: Logs are created with a timestamp and details of the event, including the selected emails and their associated priorities.
 - **Downloadable Data Files**: Allows users to download the data files (`rand.csv` and `base.csv`), which contain the list of all participants and their assigned priorities.

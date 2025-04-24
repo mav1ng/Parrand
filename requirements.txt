@@ -1,4 +1,2 @@
-tkinter
 pandas
 openpyxl
-py2app
