@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Welcome to the Participant Randomizer for AZInspire Events. This application is designed to ensure fair and balanced selection of participants for our events. It incorporates a weighted randomization process that increases the chances for applicants who were not selected in previous events.
+Welcome to the Participant Randomizer. This application is designed to ensure fair and balanced selection of participants for our events. It incorporates a weighted randomization process that increases the chances for applicants who were not selected in previous events.
 
 ## Key Features
 
