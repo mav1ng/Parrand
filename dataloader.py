@@ -67,7 +67,6 @@ def update_base(input_df, output_base_file=None, base_file=None, email_column="e
 
     base_df = load_base(base_file=base_file, email_column=email_column)
     input_df = input_df.merge(base_df[['email', 'hash']], on='email', how='left')
-    print(input_df)
 
     if return_signups_only:
         return combined_df, input_df
